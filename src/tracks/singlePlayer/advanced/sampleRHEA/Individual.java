@@ -26,7 +26,7 @@ public class Individual implements Comparable{
      * @param MUT - number of genes to mutate
      * @return - new individual, mutated from this
      */
-    Individual mutate(int MUT) {
+    public Individual mutate(int MUT) {
         Individual b = this.copy();
         b.setActions(actions);
 
