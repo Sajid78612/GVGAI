@@ -1,8 +1,8 @@
-package genome;
+package tracks.singlePlayer.advanced.sampleRHNEAT.genome;
 
-import neat.Neat;
+import tracks.singlePlayer.advanced.sampleRHNEAT.neat.Neat;
 
-public class ConnectionGene extends Gene {
+public class ConnectionGene extends Gene{
 
     private NodeGene from;
     private NodeGene to;
@@ -48,7 +48,6 @@ public class ConnectionGene extends Gene {
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
-
     public boolean equals(Object o){
         if(!(o instanceof ConnectionGene)) return false;
         ConnectionGene c = (ConnectionGene) o;

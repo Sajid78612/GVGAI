@@ -1,8 +1,6 @@
-package genome;
+package tracks.singlePlayer.advanced.sampleRHNEAT.genome;
 
 public class NodeGene extends Gene{
-
-
     private double x,y;
 
     public NodeGene(int innovation_number) {
@@ -25,7 +23,7 @@ public class NodeGene extends Gene{
         this.y = y;
     }
 
-    public boolean equals(Object o) {
+    public boolean equals(Object o){
         if(!(o instanceof NodeGene)) return false;
         return innovation_number == ((NodeGene) o).getInnovation_number();
     }
@@ -37,7 +35,7 @@ public class NodeGene extends Gene{
                 '}';
     }
 
-    public int hashCode() {
+    public int hashCode(){
         return innovation_number;
     }
 }

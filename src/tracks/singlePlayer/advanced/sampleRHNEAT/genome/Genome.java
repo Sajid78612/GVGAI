@@ -1,16 +1,13 @@
-package genome;
+package tracks.singlePlayer.advanced.sampleRHNEAT.genome;
 
-import calculations.Calculator;
-import data_structures.RandomHashSet;
-import neat.Neat;
+import tracks.singlePlayer.advanced.sampleRHNEAT.data_structures.RandomHashSet;
+import tracks.singlePlayer.advanced.sampleRHNEAT.neat.Neat;
 
 public class Genome {
-
     private RandomHashSet<ConnectionGene> connections = new RandomHashSet<>();
     private RandomHashSet<NodeGene> nodes = new RandomHashSet<>();
 
     private Neat neat;
-
 
     public Genome(Neat neat) {
         this.neat = neat;
@@ -146,15 +143,6 @@ public class Genome {
             genome.getNodes().add(c.getTo());
         }
 
-        Calculator calculator = new Calculator(genome);
-        if(calculator.calculate(1,1,1,1,1,1,1,1,1,1)[0] == 0.5 && genome.getConnections().size() != 0){
-            System.out.println(g1.getConnections().getData());
-            System.out.println(g2.getConnections().getData());
-            System.out.println(genome.getConnections().getData());
-
-            System.exit(-1);
-        }
-
         return genome;
     }
 
@@ -256,18 +244,15 @@ public class Genome {
         }
     }
 
+    // Getters for ConnectionGene, NodeGene and Neat
     public RandomHashSet<ConnectionGene> getConnections() {
         return connections;
     }
-
     public RandomHashSet<NodeGene> getNodes() {
         return nodes;
     }
-
     public Neat getNeat() {
         return neat;
     }
-
-
 
 }

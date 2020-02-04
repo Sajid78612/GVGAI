@@ -1,15 +1,18 @@
-package neat;
+package tracks.singlePlayer.advanced.sampleRHNEAT.neat;
 
-import calculations.Calculator;
-import genome.Genome;
+import tracks.singlePlayer.advanced.sampleRHNEAT.calculations.Calculator;
+import tracks.singlePlayer.advanced.sampleRHNEAT.genome.Genome;
 
 public class Client {
-
     private Calculator calculator;
 
     private Genome genome;
     private double score;
-    private Species species;
+
+    public Genome breed(Client c1, Client c2) {
+        if(c1.getScore() > c2.getScore()) return Genome.crossOver(c1.getGenome(), c2.getGenome());
+        return Genome.crossOver(c2.getGenome(), c1.getGenome());
+    }
 
     public void generate_calculator(){
         this.calculator = new Calculator(genome);
@@ -25,34 +28,23 @@ public class Client {
     }
 
     public void mutate() {
-        getGenome().mutate();
+        genome.mutate();
     }
 
     public Calculator getCalculator() {
         return calculator;
     }
-
     public Genome getGenome() {
         return genome;
     }
-
     public void setGenome(Genome genome) {
         this.genome = genome;
     }
-
     public double getScore() {
         return score;
     }
-
     public void setScore(double score) {
         this.score = score;
     }
 
-    public Species getSpecies() {
-        return species;
-    }
-
-    public void setSpecies(Species species) {
-        this.species = species;
-    }
 }

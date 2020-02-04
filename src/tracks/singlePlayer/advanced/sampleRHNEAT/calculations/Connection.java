@@ -1,8 +1,6 @@
-package calculations;
-
+package tracks.singlePlayer.advanced.sampleRHNEAT.calculations;
 
 public class Connection {
-
     private Node from;
     private Node to;
 
@@ -45,5 +43,4 @@ public class Connection {
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
-
 }

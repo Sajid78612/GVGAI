@@ -1,7 +1,6 @@
-package genome;
+package tracks.singlePlayer.advanced.sampleRHNEAT.genome;
 
 public class Gene {
-
     protected int innovation_number;
 
     public Gene(int innovation_number) {

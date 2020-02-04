@@ -1,9 +1,8 @@
-package calculations;
+package tracks.singlePlayer.advanced.sampleRHNEAT.calculations;
 
 import java.util.ArrayList;
 
-public class Node implements Comparable<Node> {
-
+public class Node implements Comparable<Node>{
     private double x;
     private double output;
     private ArrayList<Connection> connections = new ArrayList<>();
