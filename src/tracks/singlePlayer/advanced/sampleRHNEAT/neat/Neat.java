@@ -172,6 +172,10 @@ public class Neat {
         return (Client)this.clients.get(best);
     }
     // Getters
+
+    public int getMax_clients() {
+        return max_clients;
+    }
     public double getCP() {
         return CP;
     }

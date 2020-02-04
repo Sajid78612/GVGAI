@@ -1,10 +1,14 @@
 package tracks.singlePlayer.advanced.sampleRHNEAT;
 
+import core.game.Observation;
 import core.game.StateObservation;
 import core.player.AbstractPlayer;
 import ontology.Types;
 import tools.ElapsedCpuTimer;
+import tools.Vector2d;
+import tracks.singlePlayer.advanced.sampleRHNEAT.neat.Client;
 import tracks.singlePlayer.advanced.sampleRHNEAT.neat.Neat;
+import tracks.singlePlayer.advanced.sampleRHNEAT.visual.Frame;
 import tracks.singlePlayer.tools.Heuristics.StateHeuristic;
 import tracks.singlePlayer.tools.Heuristics.WinScoreHeuristic;
 
@@ -18,33 +22,33 @@ public class Agent extends AbstractPlayer{
 
     // Parameters
     private int POPULATION_SIZE = 10;
-    private int SIMULATION_DEPTH = 10;
     private StateHeuristic heuristic;
-    private int CROSSOVER_TYPE = UNIFORM_CROSS;
-    private boolean REEVALUATE = false;
-    private int MUTATION = 1;
-    private int TOURNAMENT_SIZE = 2;
-    private int ELITISM = 1;
-
     // Constants
     private final long BREAK_MS = 10;
-    public static final double epsilon = 1e-6;
-    static final int POINT1_CROSS = 0;
-    static final int UNIFORM_CROSS = 1;
-
     // Class vars
-    private Individual[] population, nextPop;
-    private int NUM_INDIVIDUALS;
     private int N_ACTIONS;
     private HashMap<Integer, Types.ACTIONS> action_mapping;
-    private Random randomGenerator;
-
+    private int INPUT_SIZE;
     // Budgets
     private ElapsedCpuTimer timer;
     private double acumTimeTakenEval = 0,avgTimeTakenEval = 0, avgTimeTaken = 0, acumTimeTaken = 0;
     private int numEvals = 0, numIters = 0;
     private boolean keepIterating = true;
     private long remaining;
+
+    // Legacy variables
+    private int SIMULATION_DEPTH = 10;
+    private int CROSSOVER_TYPE = UNIFORM_CROSS;
+    private boolean REEVALUATE = false;
+    private int MUTATION = 1;
+    private int TOURNAMENT_SIZE = 2;
+    private int ELITISM = 1;
+    public static final double epsilon = 1e-6;
+    static final int POINT1_CROSS = 0;
+    static final int UNIFORM_CROSS = 1;
+    private Individual[] population, nextPop;
+    private int NUM_INDIVIDUALS;
+    private Random randomGenerator;
 
     public Agent(StateObservation stateObs, ElapsedCpuTimer elapsedTimer) {
         randomGenerator = new Random();
@@ -64,21 +68,23 @@ public class Agent extends AbstractPlayer{
         NUM_INDIVIDUALS = 0;
         keepIterating = true;
 
-        // INITIALISE POPULATION
-        init_pop(stateObs);
+        // NEAT
+        Neat neat = init_neat(stateObs);
 
         // RUN EVOLUTION
         remaining = timer.remainingTimeMillis();
         while (remaining > avgTimeTaken && remaining > BREAK_MS && keepIterating) {
-            runIteration(stateObs);
+            evolve(stateObs, neat);
+            System.out.println(neat.getBestClient().getScore());
             remaining = timer.remainingTimeMillis();
         }
 
-        // RETURN ACTION
-        return get_best_action(population);
+        // RETURN ACTION, we have to return the best clients very first output
+        double[] bestAction = neat.getBestClient().calculate(networkInput());
+        return action_mapping.get((int)bestAction[0]);
     }
 
-    private void init_pop(StateObservation stateObs) {
+    private Neat init_neat(StateObservation stateObs) {
 
         double remaining = timer.remainingTimeMillis();
 
@@ -91,37 +97,49 @@ public class Agent extends AbstractPlayer{
         }
         action_mapping.put(k, Types.ACTIONS.ACTION_NIL);
 
-        population = new Individual[POPULATION_SIZE];
-        nextPop = new Individual[POPULATION_SIZE];
+        //PROB: This would vary depending on the game not very General Video Game AI, how to know all inputs before?
+        INPUT_SIZE = 3; // Might vary depending on the game (asteroids)
 
-        for (int i = 0; i < POPULATION_SIZE; i++) {
+        Neat neat = new Neat(INPUT_SIZE, N_ACTIONS, POPULATION_SIZE); //input nodes, output nodes, number of clients
+        new Frame(neat.empty_genome());
+
+        //TO DO: translate these into the NEAT input
+        //networkInput(stateObs);
+        ArrayList<Observation>[] npcPos = stateObs.getNPCPositions();
+        ArrayList<Observation>[][] obsGrid = stateObs.getObservationGrid();
+        Vector2d orient = stateObs.getAvatarOrientation();
+
+        for (int i = 0; i < neat.getMax_clients(); i++) {
             if (i == 0 || remaining > avgTimeTakenEval && remaining > BREAK_MS) {
-                Neat neat = new Neat(10,N_ACTIONS,POPULATION_SIZE);
-                population[i] = new Individual(SIMULATION_DEPTH, N_ACTIONS, randomGenerator);
-                evaluate(population[i], heuristic, stateObs);
+                rateClients(stateObs, neat.getClient(i), heuristic);
                 remaining = timer.remainingTimeMillis();
-                NUM_INDIVIDUALS = i+1;
-            } else {break;}
+            }
+            else {
+                break;
+            }
         }
 
-        if (NUM_INDIVIDUALS > 1)
-            Arrays.sort(population, (o1, o2) -> {
-                if (o1 == null && o2 == null) {
-                    return 0;
-                }
-                if (o1 == null) {
-                    return 1;
-                }
-                if (o2 == null) {
-                    return -1;
-                }
-                return o1.compareTo(o2);
-            });
-        for (int i = 0; i < NUM_INDIVIDUALS; i++) {
-            if (population[i] != null)
-                nextPop[i] = population[i].copy();
-        }
+       return neat;
     }
+
+    //methods to do
+    private double[] networkInput() {
+        return null;
+    }
+    private void evolve(StateObservation stateObs, Neat neat) {
+    }
+    private void rateClients(StateObservation state, Client client, StateHeuristic heuristic) {
+        ElapsedCpuTimer elapsedTimerIterationEval = new ElapsedCpuTimer();
+        StateObservation st = state.copy();
+
+        client.setScore(heuristic.evaluateState(st));
+        numEvals++;
+        acumTimeTakenEval += (elapsedTimerIterationEval.elapsedMillis());
+        avgTimeTakenEval = acumTimeTakenEval / numEvals;
+        remaining = timer.remainingTimeMillis();
+    }
+
+    // Legacy code
     private double evaluate(Individual individual, StateHeuristic heuristic, StateObservation state) {
 
         ElapsedCpuTimer elapsedTimerIterationEval = new ElapsedCpuTimer();
@@ -152,7 +170,6 @@ public class Agent extends AbstractPlayer{
 
         return individual.value;
     }
-
     private void runIteration(StateObservation stateObs) {
         ElapsedCpuTimer elapsedTimerIteration = new ElapsedCpuTimer();
 
@@ -208,7 +225,6 @@ public class Agent extends AbstractPlayer{
         acumTimeTaken += (elapsedTimerIteration.elapsedMillis());
         avgTimeTaken = acumTimeTaken / numIters;
     }
-
     private Individual crossover() {
         Individual newind = null;
         if (NUM_INDIVIDUALS > 1) {
