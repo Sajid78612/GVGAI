@@ -4,6 +4,9 @@ import tracks.singlePlayer.advanced.sampleRHNEAT.calculations.Calculator;
 import tracks.singlePlayer.advanced.sampleRHNEAT.genome.Genome;
 
 public class Client {
+
+    public int[] actions;
+
     private Calculator calculator;
 
     private Genome genome;
@@ -31,6 +34,12 @@ public class Client {
         genome.mutate();
     }
 
+    public int[] getActions() {
+        return actions;
+    }
+    public void setActions(int[] actions) {
+        this.actions = actions;
+    }
     public Calculator getCalculator() {
         return calculator;
     }

@@ -8,7 +8,6 @@ import tools.ElapsedCpuTimer;
 import tools.Vector2d;
 import tracks.singlePlayer.advanced.sampleRHNEAT.neat.Client;
 import tracks.singlePlayer.advanced.sampleRHNEAT.neat.Neat;
-import tracks.singlePlayer.advanced.sampleRHNEAT.visual.Frame;
 import tracks.singlePlayer.tools.Heuristics.StateHeuristic;
 import tracks.singlePlayer.tools.Heuristics.WinScoreHeuristic;
 
@@ -80,8 +79,12 @@ public class Agent extends AbstractPlayer{
         }
 
         // RETURN ACTION, we have to return the best clients very first output
-        double[] bestAction = neat.getBestClient().calculate(networkInput());
-        return action_mapping.get((int)bestAction[0]);
+
+        //double[] bestAction = neat.getBestClient().calculate(extractNetworkInput());
+        //return action_mapping.get((int)bestAction[0]);
+
+        int bestAction = neat.getBestClient().getActions()[0];
+        return action_mapping.get(bestAction);
     }
 
     private Neat init_neat(StateObservation stateObs) {
@@ -101,16 +104,19 @@ public class Agent extends AbstractPlayer{
         INPUT_SIZE = 3; // Might vary depending on the game (asteroids)
 
         Neat neat = new Neat(INPUT_SIZE, N_ACTIONS, POPULATION_SIZE); //input nodes, output nodes, number of clients
-        new Frame(neat.empty_genome());
-
-        //TO DO: translate these into the NEAT input
-        //networkInput(stateObs);
-        ArrayList<Observation>[] npcPos = stateObs.getNPCPositions();
-        ArrayList<Observation>[][] obsGrid = stateObs.getObservationGrid();
-        Vector2d orient = stateObs.getAvatarOrientation();
+        //new Frame(neat.empty_genome());
 
         for (int i = 0; i < neat.getMax_clients(); i++) {
             if (i == 0 || remaining > avgTimeTakenEval && remaining > BREAK_MS) {
+                double[] out = neat.getClient(i).calculate(extractNetworkInput(stateObs));
+                int index = 0;
+                for(int j = 1; j < out.length; j++){
+                    if(out[j] > out[index]){
+                        index = j;
+                    }
+                }
+                int output = index - 1;
+                neat.getClient(i).actions[i]
                 rateClients(stateObs, neat.getClient(i), heuristic);
                 remaining = timer.remainingTimeMillis();
             }
@@ -118,25 +124,66 @@ public class Agent extends AbstractPlayer{
                 break;
             }
         }
-
+        //TO DO: translate these into the NEAT input
+        extractNetworkInput(stateObs);
        return neat;
     }
 
-    //methods to do
-    private double[] networkInput() {
-        return null;
+    //methods to do tailored to asteroids only for now
+    private double[] extractNetworkInput(StateObservation stateObs) {
+
+        double[] out = new double[3];
+        double enemyNum = 0;
+
+        out[0] = stateObs.getGameScore(); //game score
+
+        Vector2d orient = stateObs.getAvatarOrientation();
+        ArrayList<Observation>[] npcPos = stateObs.getNPCPositions(orient);
+
+        if(npcPos[0] != null) { //angle between player and asteroid
+            Observation ob = npcPos[0].get(0);
+            Vector2d target = ob.position;
+            double angle = Math.atan2(target.y, target.x) - Math.atan2(orient.y, orient.x);
+            //out[1] = 1;
+            out[1] = angle;
+
+            enemyNum = npcPos[0].size();
+        } else {
+            out[1] = -1;
+        }
+
+        out[2] = enemyNum;
+
+        return out;
     }
     private void evolve(StateObservation stateObs, Neat neat) {
     }
-    private void rateClients(StateObservation state, Client client, StateHeuristic heuristic) {
+    private double rateClients(StateObservation state, Client client, StateHeuristic heuristic) {
         ElapsedCpuTimer elapsedTimerIterationEval = new ElapsedCpuTimer();
         StateObservation st = state.copy();
 
+        int i;
+        double acum = 0, avg;
+        for (i = 0; i < SIMULATION_DEPTH; i++) {
+            if (!st.isGameOver()) {
+                ElapsedCpuTimer elapsedTimerIteration = new ElapsedCpuTimer();
+                st.advance(action_mapping.get(client.getActions()[i]));
+
+                acum += elapsedTimerIteration.elapsedMillis();
+                avg = acum / (i + 1);
+                remaining = timer.remainingTimeMillis();
+                if (remaining < 2 * avg || remaining < BREAK_MS) break;
+            } else {
+                break;
+            }
+        }
         client.setScore(heuristic.evaluateState(st));
         numEvals++;
         acumTimeTakenEval += (elapsedTimerIterationEval.elapsedMillis());
         avgTimeTakenEval = acumTimeTakenEval / numEvals;
         remaining = timer.remainingTimeMillis();
+
+        return client.getScore();
     }
 
     // Legacy code
