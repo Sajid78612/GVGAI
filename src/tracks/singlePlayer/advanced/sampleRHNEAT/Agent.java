@@ -12,7 +12,6 @@ import tracks.singlePlayer.tools.Heuristics.StateHeuristic;
 import tracks.singlePlayer.tools.Heuristics.WinScoreHeuristic;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -126,29 +125,24 @@ public class Agent extends AbstractPlayer{
     //methods to do tailored to asteroids only for now
     private double[] extractNetworkInput(StateObservation stateObs) {
 
-        double[] out = new double[2];
-        double enemyNum = 0;
+        int outputSize = 2;
+        double dotProduct = 0;
 
-        out[0] = stateObs.getGameScore(); //game score
-
+        Vector2d position = stateObs.getAvatarPosition();
         Vector2d orient = stateObs.getAvatarOrientation();
-        ArrayList<Observation>[] npcPos = stateObs.getNPCPositions(orient);
+        ArrayList<Observation>[] npcPos = stateObs.getNPCPositions();
 
-        /*
-        if(npcPos[0] != null) { //angle between player and asteroid
+        if(!(npcPos == null)) { //angle between player and asteroid
             Observation ob = npcPos[0].get(0);
             Vector2d target = ob.position;
-            double angle = Math.atan2(target.y, target.x) - Math.atan2(orient.y, orient.x);
-            //out[1] = 1;
-            out[1] = angle;
-
-            enemyNum = npcPos[0].size();
-        } else {
-            out[1] = -1;
+            dotProduct = orient.dot(target);
+            outputSize = 3;
         }
-         */
 
-        out[1] = enemyNum;
+        double[] out = new double[outputSize];
+        out[0] = stateObs.getGameScore(); //Game score
+        out[1] = stateObs.getAvatarSpeed(); //Avatar velocity
+        if (outputSize == 3) out[2] = dotProduct; //Angle between player and enemy
 
         return out;
     }
@@ -185,132 +179,18 @@ public class Agent extends AbstractPlayer{
                 break;
             }
         }
-        client.setScore(heuristic.evaluateState(st));
+
+        double winScore = 0;
+        if(st.getGameWinner().equals(Types.WINNER.PLAYER_WINS)) {
+            winScore = 1000;
+        }
+        client.setScore(heuristic.evaluateState(st) + winScore);// score + win condition
         numEvals++;
         acumTimeTakenEval += (elapsedTimerIterationEval.elapsedMillis());
         avgTimeTakenEval = acumTimeTakenEval / numEvals;
         remaining = timer.remainingTimeMillis();
 
         return client.getScore();
-    }
-
-    // Legacy code
-    private double evaluate(Individual individual, StateHeuristic heuristic, StateObservation state) {
-
-        ElapsedCpuTimer elapsedTimerIterationEval = new ElapsedCpuTimer();
-
-        StateObservation st = state.copy();
-        int i;
-        double acum = 0, avg;
-        for (i = 0; i < SIMULATION_DEPTH; i++) {
-            if (! st.isGameOver()) {
-                ElapsedCpuTimer elapsedTimerIteration = new ElapsedCpuTimer();
-                st.advance(action_mapping.get(individual.actions[i]));
-
-                acum += elapsedTimerIteration.elapsedMillis();
-                avg = acum / (i+1);
-                remaining = timer.remainingTimeMillis();
-                if (remaining < 2*avg || remaining < BREAK_MS) break;
-            } else {
-                break;
-            }
-        }
-
-        individual.value = heuristic.evaluateState(st);
-
-        numEvals++;
-        acumTimeTakenEval += (elapsedTimerIterationEval.elapsedMillis());
-        avgTimeTakenEval = acumTimeTakenEval / numEvals;
-        remaining = timer.remainingTimeMillis();
-
-        return individual.value;
-    }
-    private void runIteration(StateObservation stateObs) {
-        ElapsedCpuTimer elapsedTimerIteration = new ElapsedCpuTimer();
-
-        if (REEVALUATE) {
-            for (int i = 0; i < ELITISM; i++) {
-                if (remaining > 2*avgTimeTakenEval && remaining > BREAK_MS) { // if enough time to evaluate one more individual
-                    evaluate(population[i], heuristic, stateObs);
-                } else {keepIterating = false;}
-            }
-        }
-
-        if (NUM_INDIVIDUALS > 1) {
-            for (int i = ELITISM; i < NUM_INDIVIDUALS; i++) {
-                if (remaining > 2*avgTimeTakenEval && remaining > BREAK_MS) { // if enough time to evaluate one more individual
-                    Individual newind;
-
-                    newind = crossover();
-                    newind = newind.mutate(MUTATION);
-
-                    // evaluate new individual, insert into population
-                    add_individual(newind, nextPop, i, stateObs);
-
-                    remaining = timer.remainingTimeMillis();
-                } else {
-                    keepIterating = false;
-                    break;
-                }
-            }
-
-            Arrays.sort(nextPop, (o1, o2) -> {
-                if (o1 == null && o2 == null) {
-                    return 0;
-                }
-                if (o1 == null) {
-                    return 1;
-                }
-                if (o2 == null) {
-                    return -1;
-                }
-                return o1.compareTo(o2);
-            });
-
-        } else if (NUM_INDIVIDUALS == 1){
-            Individual newind = new Individual(SIMULATION_DEPTH, N_ACTIONS, randomGenerator).mutate(MUTATION);
-            evaluate(newind, heuristic, stateObs);
-            if (newind.value > population[0].value)
-                nextPop[0] = newind;
-        }
-
-        population = nextPop.clone();
-
-        numIters++;
-        acumTimeTaken += (elapsedTimerIteration.elapsedMillis());
-        avgTimeTaken = acumTimeTaken / numIters;
-    }
-    private Individual crossover() {
-        Individual newind = null;
-        if (NUM_INDIVIDUALS > 1) {
-            newind = new Individual(SIMULATION_DEPTH, N_ACTIONS, randomGenerator);
-            Individual[] tournament = new Individual[TOURNAMENT_SIZE];
-            ArrayList<Individual> list = new ArrayList<>(Arrays.asList(population));
-
-            //Select a number of random distinct individuals for tournament and sort them based on value
-            for (int i = 0; i < TOURNAMENT_SIZE; i++) {
-                int index = randomGenerator.nextInt(list.size());
-                tournament[i] = list.get(index);
-                list.remove(index);
-            }
-            Arrays.sort(tournament);
-
-            //get best individuals in tournament as parents
-            if (TOURNAMENT_SIZE >= 2) {
-                newind.crossover(tournament[0], tournament[1], CROSSOVER_TYPE);
-            } else {
-                System.out.println("WARNING: Number of parents must be LESS than tournament size.");
-            }
-        }
-        return newind;
-    }
-    private void add_individual(Individual newind, Individual[] pop, int idx, StateObservation stateObs) {
-        evaluate(newind, heuristic, stateObs);
-        pop[idx] = newind.copy();
-    }
-    private Types.ACTIONS get_best_action(Individual[] pop) {
-        int bestAction = pop[0].actions[0];
-        return action_mapping.get(bestAction);
     }
 }
 
