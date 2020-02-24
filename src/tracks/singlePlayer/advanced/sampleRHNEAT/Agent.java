@@ -74,17 +74,22 @@ public class Agent extends AbstractPlayer{
         remaining = timer.remainingTimeMillis();
         while (remaining > avgTimeTaken && remaining > BREAK_MS && keepIterating) {
             evolve(stateObs, neat);
-            System.out.println(neat.getBestClient().getScore());
+          //  System.out.println(neat.getBestClient().getScore());
             remaining = timer.remainingTimeMillis();
         }
 
         // RETURN ACTION, we have to return the best clients very first output
 
-        //double[] bestAction = neat.getBestClient().calculate(extractNetworkInput());
+        double[] bestAction = neat.getBestClient().calculate(extractNetworkInput(stateObs));
+        int index = 0;
+        for(int j = 1; j < bestAction.length; j++){
+            if(bestAction[j] > bestAction[index]){
+                index = j;
+            }
+        }
         //return action_mapping.get((int)bestAction[0]);
 
-        int bestAction = neat.getBestClient().getActions()[0];
-        return action_mapping.get(bestAction);
+        return action_mapping.get(index);
     }
 
     private Neat init_neat(StateObservation stateObs) {
@@ -101,22 +106,13 @@ public class Agent extends AbstractPlayer{
         action_mapping.put(k, Types.ACTIONS.ACTION_NIL);
 
         //PROB: This would vary depending on the game not very General Video Game AI, how to know all inputs before?
-        INPUT_SIZE = 3; // Might vary depending on the game (asteroids)
+        INPUT_SIZE = 2; // Might vary depending on the game (asteroids)
 
         Neat neat = new Neat(INPUT_SIZE, N_ACTIONS, POPULATION_SIZE); //input nodes, output nodes, number of clients
         //new Frame(neat.empty_genome());
 
         for (int i = 0; i < neat.getMax_clients(); i++) {
             if (i == 0 || remaining > avgTimeTakenEval && remaining > BREAK_MS) {
-                double[] out = neat.getClient(i).calculate(extractNetworkInput(stateObs));
-                int index = 0;
-                for(int j = 1; j < out.length; j++){
-                    if(out[j] > out[index]){
-                        index = j;
-                    }
-                }
-                int output = index - 1;
-                neat.getClient(i).actions[i]
                 rateClients(stateObs, neat.getClient(i), heuristic);
                 remaining = timer.remainingTimeMillis();
             }
@@ -124,15 +120,13 @@ public class Agent extends AbstractPlayer{
                 break;
             }
         }
-        //TO DO: translate these into the NEAT input
-        extractNetworkInput(stateObs);
        return neat;
     }
 
     //methods to do tailored to asteroids only for now
     private double[] extractNetworkInput(StateObservation stateObs) {
 
-        double[] out = new double[3];
+        double[] out = new double[2];
         double enemyNum = 0;
 
         out[0] = stateObs.getGameScore(); //game score
@@ -140,6 +134,7 @@ public class Agent extends AbstractPlayer{
         Vector2d orient = stateObs.getAvatarOrientation();
         ArrayList<Observation>[] npcPos = stateObs.getNPCPositions(orient);
 
+        /*
         if(npcPos[0] != null) { //angle between player and asteroid
             Observation ob = npcPos[0].get(0);
             Vector2d target = ob.position;
@@ -151,12 +146,17 @@ public class Agent extends AbstractPlayer{
         } else {
             out[1] = -1;
         }
+         */
 
-        out[2] = enemyNum;
+        out[1] = enemyNum;
 
         return out;
     }
     private void evolve(StateObservation stateObs, Neat neat) {
+        for(int i = 0; i < neat.getMax_clients(); i++){
+            rateClients(stateObs, neat.getClient(i), heuristic);
+        }
+        neat.evolve();
     }
     private double rateClients(StateObservation state, Client client, StateHeuristic heuristic) {
         ElapsedCpuTimer elapsedTimerIterationEval = new ElapsedCpuTimer();
@@ -167,7 +167,15 @@ public class Agent extends AbstractPlayer{
         for (i = 0; i < SIMULATION_DEPTH; i++) {
             if (!st.isGameOver()) {
                 ElapsedCpuTimer elapsedTimerIteration = new ElapsedCpuTimer();
-                st.advance(action_mapping.get(client.getActions()[i]));
+                double[] out = client.calculate(extractNetworkInput(st));
+                int index = 0;
+                for(int j = 1; j < out.length; j++){
+                    if(out[j] > out[index]){
+                        index = j;
+                    }
+                }
+
+                st.advance(action_mapping.get(index));
 
                 acum += elapsedTimerIteration.elapsedMillis();
                 avg = acum / (i + 1);
