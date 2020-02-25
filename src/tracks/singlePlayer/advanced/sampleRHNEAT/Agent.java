@@ -36,16 +36,6 @@ public class Agent extends AbstractPlayer{
 
     // Legacy variables
     private int SIMULATION_DEPTH = 10;
-    private int CROSSOVER_TYPE = UNIFORM_CROSS;
-    private boolean REEVALUATE = false;
-    private int MUTATION = 1;
-    private int TOURNAMENT_SIZE = 2;
-    private int ELITISM = 1;
-    public static final double epsilon = 1e-6;
-    static final int POINT1_CROSS = 0;
-    static final int UNIFORM_CROSS = 1;
-    private Individual[] population, nextPop;
-    private int NUM_INDIVIDUALS;
     private Random randomGenerator;
 
     public Agent(StateObservation stateObs, ElapsedCpuTimer elapsedTimer) {
@@ -59,11 +49,10 @@ public class Agent extends AbstractPlayer{
         this.timer = elapsedTimer;
         avgTimeTaken = 0;
         acumTimeTaken = 0;
+        remaining = timer.remainingTimeMillis();
         numEvals = 0;
         acumTimeTakenEval = 0;
         numIters = 0;
-        remaining = timer.remainingTimeMillis();
-        NUM_INDIVIDUALS = 0;
         keepIterating = true;
 
         // NEAT
@@ -80,6 +69,13 @@ public class Agent extends AbstractPlayer{
         // RETURN ACTION, we have to return the best clients very first output
 
         double[] bestAction = neat.getBestClient().calculate(extractNetworkInput(stateObs));
+        /*
+        System.out.println("#################");
+        for(int i=0; i<bestAction.length; i++) {
+            System.out.println(bestAction[i]);
+        }
+        System.out.println("#################");
+         */
         int index = 0;
         for(int j = 1; j < bestAction.length; j++){
             if(bestAction[j] > bestAction[index]){
@@ -105,7 +101,7 @@ public class Agent extends AbstractPlayer{
         action_mapping.put(k, Types.ACTIONS.ACTION_NIL);
 
         //PROB: This would vary depending on the game not very General Video Game AI, how to know all inputs before?
-        INPUT_SIZE = 2; // Might vary depending on the game (asteroids)
+        INPUT_SIZE = extractNetworkInput(stateObs).length; // Might vary depending on the game (asteroids)
 
         Neat neat = new Neat(INPUT_SIZE, N_ACTIONS, POPULATION_SIZE); //input nodes, output nodes, number of clients
         //new Frame(neat.empty_genome());
@@ -130,12 +126,21 @@ public class Agent extends AbstractPlayer{
 
         Vector2d position = stateObs.getAvatarPosition();
         Vector2d orient = stateObs.getAvatarOrientation();
-        ArrayList<Observation>[] npcPos = stateObs.getNPCPositions();
+        ArrayList<Observation>[] imovPos = stateObs.getImmovablePositions(position);
+        //Dimension dim = stateObs.getWorldDimension();
+        //.out.println();
 
-        if(!(npcPos == null)) { //angle between player and asteroid
-            Observation ob = npcPos[0].get(0);
+        //ArrayList<Observation>[] npcPos = stateObs.getNPCPositions(); //Other games
+        //ArrayList<Observation>[] enemyPos = stateObs.getMovablePositions(position); //Other Games
+
+        if(!(imovPos == null)) { //angle between player and asteroid
+            Observation ob = imovPos[0].get(0);
             Vector2d target = ob.position;
-            dotProduct = orient.dot(target);
+            position.normalise();
+            target.normalise();
+            //dotProduct = Math.atan2(target.y, target.x) - Math.atan2(position.y, position.x);
+            dotProduct = target.dot(orient);
+            //System.out.println(dotProduct);
             outputSize = 3;
         }
 
@@ -183,6 +188,9 @@ public class Agent extends AbstractPlayer{
         double winScore = 0;
         if(st.getGameWinner().equals(Types.WINNER.PLAYER_WINS)) {
             winScore = 1000;
+        }
+        if(st.getGameWinner().equals(Types.WINNER.PLAYER_LOSES)) {
+            winScore = -1000;
         }
         client.setScore(heuristic.evaluateState(st) + winScore);// score + win condition
         numEvals++;

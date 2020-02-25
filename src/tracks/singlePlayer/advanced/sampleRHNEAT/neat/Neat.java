@@ -6,6 +6,7 @@ import tracks.singlePlayer.advanced.sampleRHNEAT.genome.Genome;
 import tracks.singlePlayer.advanced.sampleRHNEAT.genome.NodeGene;
 
 import java.util.HashMap;
+import java.util.Comparator;
 
 public class Neat {
     public static final int MAX_NODES = (int)Math.pow(2,20); // 2 million nodes max
@@ -19,6 +20,16 @@ public class Neat {
     private double PROBABILITY_MUTATE_WEIGHT_SHIFT = 0.02;
     private double PROBABILITY_MUTATE_WEIGHT_RANDOM= 0.02;
     private double PROBABILITY_MUTATE_TOGGLE_LINK = 0;
+
+    /*
+    private double WEIGHT_SHIFT_STRENGTH = 0.3;
+    private double WEIGHT_RANDOM_STRENGTH = 1;
+    private double PROBABILITY_MUTATE_LINK = 0.01;
+    private double PROBABILITY_MUTATE_NODE = 0.1;
+    private double PROBABILITY_MUTATE_WEIGHT_SHIFT = 0.02;
+    private double PROBABILITY_MUTATE_WEIGHT_RANDOM= 0.02;
+    private double PROBABILITY_MUTATE_TOGGLE_LINK = 0;
+    */
 
     private HashMap<ConnectionGene, ConnectionGene> all_connections = new HashMap<>();
     private RandomHashSet<NodeGene> all_nodes = new RandomHashSet<>();
@@ -114,10 +125,27 @@ public class Neat {
     }
 
     public void evolve() {
+        //kill();
         reproduce();
         mutate();
         for(Client c:clients.getData()){
             c.generate_calculator();
+        }
+    }
+
+    public void kill() {
+        clients.getData().sort(
+                new Comparator<Client>() {
+                    @Override
+                    public int compare(Client o1, Client o2) {
+                        return Double.compare(o1.getScore(), o2.getScore());
+                    }
+                }
+        );
+
+        double amount = 0.2 * this.clients.size();
+        for(int i = 0;i < amount; i++){
+            clients.remove(0);
         }
     }
 
@@ -172,7 +200,9 @@ public class Neat {
         return (Client)this.clients.get(best);
     }
     // Getters
-
+    public int clientSize() {
+        return this.clients.size();
+    }
     public int getMax_clients() {
         return max_clients;
     }
@@ -217,5 +247,17 @@ public class Neat {
     }
     public int getInput_size() {
         return input_size;
+    }
+    public void setPROBABILITY_MUTATE_LINK(double PROBABILITY_MUTATE_LINK) {
+        this.PROBABILITY_MUTATE_LINK = PROBABILITY_MUTATE_LINK;
+    }
+    public void setPROBABILITY_MUTATE_NODE(double PROBABILITY_MUTATE_NODE) {
+        this.PROBABILITY_MUTATE_NODE = PROBABILITY_MUTATE_NODE;
+    }
+    public void setPROBABILITY_MUTATE_WEIGHT_SHIFT(double PROBABILITY_MUTATE_WEIGHT_SHIFT) {
+        this.PROBABILITY_MUTATE_WEIGHT_SHIFT = PROBABILITY_MUTATE_WEIGHT_SHIFT;
+    }
+    public void setPROBABILITY_MUTATE_WEIGHT_RANDOM(double PROBABILITY_MUTATE_WEIGHT_RANDOM) {
+        this.PROBABILITY_MUTATE_WEIGHT_RANDOM = PROBABILITY_MUTATE_WEIGHT_RANDOM;
     }
 }
