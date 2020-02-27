@@ -15,10 +15,10 @@ public class Neat {
     private double CP = 4;
     private double WEIGHT_SHIFT_STRENGTH = 0.3;
     private double WEIGHT_RANDOM_STRENGTH = 1;
-    private double PROBABILITY_MUTATE_LINK = 0.01;
+    private double PROBABILITY_MUTATE_LINK = 0.1;
     private double PROBABILITY_MUTATE_NODE = 0.1;
-    private double PROBABILITY_MUTATE_WEIGHT_SHIFT = 0.02;
-    private double PROBABILITY_MUTATE_WEIGHT_RANDOM= 0.02;
+    private double PROBABILITY_MUTATE_WEIGHT_SHIFT = 0.2;
+    private double PROBABILITY_MUTATE_WEIGHT_RANDOM= 0.2;
     private double PROBABILITY_MUTATE_TOGGLE_LINK = 0;
 
     /*
