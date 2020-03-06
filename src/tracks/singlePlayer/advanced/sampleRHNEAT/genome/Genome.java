@@ -1,5 +1,4 @@
 package tracks.singlePlayer.advanced.sampleRHNEAT.genome;
-
 import tracks.singlePlayer.advanced.sampleRHNEAT.data_structures.RandomHashSet;
 import tracks.singlePlayer.advanced.sampleRHNEAT.neat.Neat;
 

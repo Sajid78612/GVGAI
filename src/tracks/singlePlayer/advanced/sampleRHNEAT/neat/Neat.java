@@ -1,26 +1,29 @@
 package tracks.singlePlayer.advanced.sampleRHNEAT.neat;
 
 import tracks.singlePlayer.advanced.sampleRHNEAT.data_structures.RandomHashSet;
+import tracks.singlePlayer.advanced.sampleRHNEAT.data_structures.RandomSelector;
 import tracks.singlePlayer.advanced.sampleRHNEAT.genome.ConnectionGene;
 import tracks.singlePlayer.advanced.sampleRHNEAT.genome.Genome;
 import tracks.singlePlayer.advanced.sampleRHNEAT.genome.NodeGene;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Comparator;
+import java.util.Random;
 
 public class Neat {
     public static final int MAX_NODES = (int)Math.pow(2,20); // 2 million nodes max
 
     private double C1 = 1, C2 = 1, C3 = 1;
     private double CP = 4;
-    private double WEIGHT_SHIFT_STRENGTH = 0.3;
+    private double WEIGHT_SHIFT_STRENGTH = 0.4;
     private double WEIGHT_RANDOM_STRENGTH = 1;
-    private double PROBABILITY_MUTATE_LINK = 0.1;
-    private double PROBABILITY_MUTATE_NODE = 0.1;
-    private double PROBABILITY_MUTATE_WEIGHT_SHIFT = 0.2;
-    private double PROBABILITY_MUTATE_WEIGHT_RANDOM= 0.2;
-    private double PROBABILITY_MUTATE_TOGGLE_LINK = 0;
 
+    private double PROBABILITY_MUTATE_LINK = 0.5;
+    private double PROBABILITY_MUTATE_NODE = 0.3;
+    private double PROBABILITY_MUTATE_WEIGHT_SHIFT = 0.4;
+    private double PROBABILITY_MUTATE_WEIGHT_RANDOM= 0.3;
+    private double PROBABILITY_MUTATE_TOGGLE_LINK = 0.05;
+    private double SURVIVORS = 0.8;
     /*
     private double WEIGHT_SHIFT_STRENGTH = 0.3;
     private double WEIGHT_RANDOM_STRENGTH = 1;
@@ -34,6 +37,7 @@ public class Neat {
     private HashMap<ConnectionGene, ConnectionGene> all_connections = new HashMap<>();
     private RandomHashSet<NodeGene> all_nodes = new RandomHashSet<>();
     private RandomHashSet<Client> clients = new RandomHashSet<>();
+    private RandomHashSet<Species> species = new RandomHashSet<>();
 
     private int max_clients;
     private int output_size;
@@ -82,7 +86,6 @@ public class Neat {
     public Client getClient(int index) {
         return clients.get(index);
     }
-
     public static ConnectionGene getConnection(ConnectionGene con){
         ConnectionGene c = new ConnectionGene(con.getFrom(), con.getTo());
         c.setInnovation_number(con.getInnovation_number());
@@ -111,7 +114,6 @@ public class Neat {
         if(data == null) return 0;
         return data.getReplaceIndex();
     }
-
     public NodeGene getNode() {
         NodeGene n = new NodeGene(all_nodes.size() + 1);
         all_nodes.add(n);
@@ -125,36 +127,46 @@ public class Neat {
     }
 
     public void evolve() {
-        //kill();
+
+        gen_species();
+        kill();
+        remove_extinct_species();
         reproduce();
         mutate();
         for(Client c:clients.getData()){
             c.generate_calculator();
         }
     }
-
-    public void kill() {
-        clients.getData().sort(
-                new Comparator<Client>() {
-                    @Override
-                    public int compare(Client o1, Client o2) {
-                        return Double.compare(o1.getScore(), o2.getScore());
-                    }
-                }
-        );
-
-        double amount = 0.2 * this.clients.size();
-        for(int i = 0;i < amount; i++){
-            clients.remove(0);
+    public void printSpecies() {
+        System.out.println("##########################################");
+        for(Species s:this.species.getData()){
+            System.out.println(s + "  " + s.getScore() + "  " + s.size());
         }
     }
 
     private void reproduce() {
+        RandomSelector<Species> selector = new RandomSelector<>();
+        //Species spare = species.get(0);
+        for(Species s:species.getData()){
+            selector.add(s, s.getScore());
+        }
+
         for(Client c:clients.getData()){
-            Client c1 = clients.random_element();
-            Client c2 = clients.random_element();
-            c.setGenome(c.breed(c1, c2));
-            clients.add(c);
+            if(c.getSpecies() == null){
+                Species s = selector.random();
+                /*
+                if(s != null) {
+                    spare = s;
+                }
+                else {
+                    s = spare;
+                }
+                 */
+                if(s != null) {
+                    c.setGenome(s.breed());
+                    s.force_put(c);
+                }
+            }
         }
     }
 
@@ -163,6 +175,48 @@ public class Neat {
             c.mutate();
         }
     }
+
+    private void remove_extinct_species() {
+        for(int i = species.size()-1; i>= 0; i--){
+            if(species.get(i).size() <= 1){
+                species.get(i).goExtinct();
+                species.remove(i);
+            }
+        }
+    }
+
+    private void gen_species() {
+        for(Species s:species.getData()){
+            s.reset();
+        }
+
+        for(Client c:clients.getData()){
+            if(c.getSpecies() != null) continue;
+
+
+            boolean found = false;
+            for(Species s:species.getData()){
+                if(s.put(c)){
+                    found = true;
+                    break;
+                }
+            }
+            if(!found){
+                species.add(new Species(c));
+            }
+        }
+
+        for(Species s:species.getData()){
+            s.evaluate_score();
+        }
+    }
+
+    private void kill() {
+        for(Species s:species.getData()){
+            s.kill(1 - SURVIVORS);
+        }
+    }
+
 
     public static void main(String[] args) {
         Neat neat = new Neat(10,1,1000);
@@ -259,5 +313,21 @@ public class Neat {
     }
     public void setPROBABILITY_MUTATE_WEIGHT_RANDOM(double PROBABILITY_MUTATE_WEIGHT_RANDOM) {
         this.PROBABILITY_MUTATE_WEIGHT_RANDOM = PROBABILITY_MUTATE_WEIGHT_RANDOM;
+    }
+
+    public RandomHashSet<Client> getClients() {
+        return clients;
+    }
+
+    public void setClients(RandomHashSet<Client> clients) {
+        this.clients = clients;
+    }
+
+    public RandomHashSet<Species> getSpecies() {
+        return species;
+    }
+
+    public void setSpecies(RandomHashSet<Species> species) {
+        this.species = species;
     }
 }

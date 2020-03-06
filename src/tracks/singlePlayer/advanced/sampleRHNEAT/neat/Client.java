@@ -11,11 +11,13 @@ public class Client {
 
     private Genome genome;
     private double score;
-
+    private Species species;
+/*
     public Genome breed(Client c1, Client c2) {
         if(c1.getScore() > c2.getScore()) return Genome.crossOver(c1.getGenome(), c2.getGenome());
         return Genome.crossOver(c2.getGenome(), c1.getGenome());
     }
+*/
 
     public void generate_calculator(){
         this.calculator = new Calculator(genome);
@@ -31,7 +33,7 @@ public class Client {
     }
 
     public void mutate() {
-        genome.mutate();
+        getGenome().mutate();
     }
 
     public int[] getActions() {
@@ -56,4 +58,11 @@ public class Client {
         this.score = score;
     }
 
+    public Species getSpecies() {
+        return species;
+    }
+
+    public void setSpecies(Species species) {
+        this.species = species;
+    }
 }

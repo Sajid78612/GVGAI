@@ -17,13 +17,18 @@ public class RandomSelector<T> {
     public T random() {
         double v = Math.random() * total_score;
         double c = 0;
+
         for(int i = 0; i < objects.size(); i++){
             c += scores.get(i);
             if(c >= v){
                 return objects.get(i);
             }
         }
-        return null;
+        return null; //if not scores and at least one object
+    }
+
+    public int getSize() {
+        return objects.size();
     }
 
     public void reset() {

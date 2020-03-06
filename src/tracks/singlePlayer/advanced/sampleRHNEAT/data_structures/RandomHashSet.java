@@ -56,7 +56,7 @@ public class RandomHashSet<T> {
     }
 
     public T get(int index){
-        if(index < 0 || index >= size())return null;
+        if(index < 0 || index >= size()) return null;
         return data.get(index);
     }
 
