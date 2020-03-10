@@ -14,6 +14,7 @@ import tracks.singlePlayer.tools.Heuristics.WinScoreHeuristic;
 import tracks.singlePlayer.advanced.sampleRHNEAT.visual.Frame;
 
 import java.awt.*;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -22,7 +23,7 @@ import java.util.HashMap;
 public class Agent extends AbstractPlayer{
 
     // Parameters
-    private int POPULATION_SIZE = 20;
+    private int POPULATION_SIZE = 30;
     private StateHeuristic heuristic;
     // Constants
     private final long BREAK_MS = 10;
@@ -37,10 +38,11 @@ public class Agent extends AbstractPlayer{
     private boolean keepIterating = true;
     private long remaining;
     // variables
-    private int SIMULATION_DEPTH = 10;
+    private int SIMULATION_DEPTH = 15;
     private double percentageClientToKill = 0.2;
     private boolean firstTimeRan = true;
     private Neat neat;
+    private int counter = 0;
 
     //Some game-related features
     private double max_distance; //maximum distance
@@ -77,6 +79,7 @@ public class Agent extends AbstractPlayer{
                             return Double.compare(o1.getScore(), o2.getScore());
                         }
                     });
+
             neat.getClients().getData().sort(
                     new Comparator<Client>() {
                         @Override
@@ -86,10 +89,20 @@ public class Agent extends AbstractPlayer{
                     });
 
             double amount = percentageClientToKill * neat.getClients().size();
-                for(int i = 0;i < amount; i++){
-                    neat.getClients().get(0).setSpecies(null);
-                    neat.getSpecies().remove(0);
-                }
+            for(int i = 0;i < amount; i++){
+                neat.getClients().get(0).setSpecies(null);
+                neat.getSpecies().remove(0);
+            }
+            //Randomly re-add the population lost
+            /*
+            for(int i = 0; i < amount; i++){
+                Client c = new Client();
+                c.setGenome(neat.empty_genome());
+                c.generate_calculator();
+                neat.getClients().add(c);
+            }
+             */
+
         }
 
 
@@ -102,9 +115,12 @@ public class Agent extends AbstractPlayer{
 
         // RETURN ACTION, we have to return the best clients very first output
         double[] bestAction = neat.getBestClient().calculate(extractNetworkInput(stateObs));
-        if(timer.remainingTimeMillis() == 5 || stateObs.isGameOver()) {
-            //new Frame(neat.getBestClient().getGenome());
+        /* PRINT OUT GENOME AT TICK 400
+        if(counter == 400) {
+            new Frame(neat.getBestClient().getGenome());
         }
+         */
+
         /*
         System.out.println("#################");
         for(int i=0; i<bestAction.length; i++) {
@@ -118,6 +134,7 @@ public class Agent extends AbstractPlayer{
                 index = j;
             }
         }
+        counter++;
         return action_mapping.get(index);
     }
 
@@ -136,8 +153,7 @@ public class Agent extends AbstractPlayer{
 
         //PROB: This would vary depending on the game not very General Video Game AI, how to know all inputs before?
         INPUT_SIZE = extractNetworkInput(stateObs).length; // Might vary depending on the game (asteroids)
-        System.out.println("this is my input: " + INPUT_SIZE);
-//        INPUT_SIZE = 4;
+//      INPUT_SIZE = 4;
 
         Neat neat = new Neat(INPUT_SIZE, N_ACTIONS, POPULATION_SIZE); //input nodes, output nodes, number of clients
 

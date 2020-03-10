@@ -20,8 +20,8 @@ public class Neat {
 
     private double PROBABILITY_MUTATE_LINK = 0.5;
     private double PROBABILITY_MUTATE_NODE = 0.3;
-    private double PROBABILITY_MUTATE_WEIGHT_SHIFT = 0.4;
-    private double PROBABILITY_MUTATE_WEIGHT_RANDOM= 0.3;
+    private double PROBABILITY_MUTATE_WEIGHT_SHIFT = 0.5;
+    private double PROBABILITY_MUTATE_WEIGHT_RANDOM= 0.6;
     private double PROBABILITY_MUTATE_TOGGLE_LINK = 0.05;
     private double SURVIVORS = 0.8;
     /*
